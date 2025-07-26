@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -194,8 +195,10 @@ func (q *Query) updateMetrics(conn *connection, res map[string]interface{}, iv s
 
 // updateMetrics parses a single row and returns a const metric
 func (q *Query) updateMetric(conn *connection, res map[string]interface{}, valueName string, iv string, il string) (prometheus.Metric, error) {
+	level.Debug(q.log).Log("msg", "Updating metric", "valueName", valueName, "res", res)
 	var value float64
 	if i, ok := res[valueName]; ok {
+		level.Debug(q.log).Log("msg", "Value type", "type", fmt.Sprintf("%T", i), "valueName", valueName)
 		switch f := i.(type) {
 		case int:
 			value = float64(f)
@@ -214,11 +217,36 @@ func (q *Query) updateMetric(conn *connection, res map[string]interface{}, value
 		case float64:
 			value = float64(f)
 		case []uint8:
-			val, err := strconv.ParseFloat(string(f), 64)
-			if err != nil {
-				return nil, fmt.Errorf("column '%s' must be type float, is '%T' (val: %s)", valueName, i, f)
+			if conn.driver == "n1ql" {
+				var jsonData map[string]interface{}
+				// First try to parse as float
+				if val, err := strconv.ParseFloat(string(f), 64); err == nil {
+					value = val
+				} else {
+					// If float parsing fails, try JSON parsing
+					level.Info(q.log).Log("msg", "Parsing JSON data", "data", string(f), "valueField", valueName)
+					if err := json.Unmarshal(f, &jsonData); err == nil {
+						if v, ok := jsonData[valueName]; ok {
+							switch vt := v.(type) {
+							case float64:
+								value = vt
+							case int:
+								value = float64(vt)
+							default:
+								return nil, fmt.Errorf("JSON field '%s' must be numeric, got %T", valueName, v)
+							}
+						} else {
+							return nil, fmt.Errorf("JSON does not contain field '%s'", valueName)
+						}
+					}
+				}
+			} else {
+				val, err := strconv.ParseFloat(string(f), 64)
+				if err != nil {
+					return nil, fmt.Errorf("column '%s' must be type float or JSON with numeric field, is '%T' (val: %s)", valueName, i, f)
+				}
+				value = val
 			}
-			value = val
 		case string:
 			val, err := strconv.ParseFloat(f, 64)
 			if err != nil {
@@ -255,7 +283,18 @@ func (q *Query) updateMetric(conn *connection, res map[string]interface{}, value
 			case string:
 				lv = str
 			case []uint8:
-				lv = string(str)
+				if conn.driver == "n1ql" {
+					// For N1QL, treat as JSON containing a single scalar string
+					var jsonStr string
+					level.Info(q.log).Log("msg", "Parsing JSON data", "data", string(str), "label", label)
+					if err := json.Unmarshal(str, &jsonStr); err != nil {
+						lv = string(str) // Fallback to raw string if not valid JSON
+					} else {
+						lv = jsonStr
+					}
+				} else {
+					lv = string(str)
+				}
 			default:
 				return nil, fmt.Errorf("column '%s' must be type text (string)", label)
 			}

@@ -31,6 +31,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/rds/rdsutils"
+	go_n1ql "github.com/couchbase/go_n1ql" // register the N1QL driver
 )
 
 var (
@@ -345,6 +346,38 @@ func (j *Job) updateConnections() {
 						continue
 					}
 				}
+			}
+
+			// N1QL support: recognize n1ql:// or http(s)://host:8093 as N1QL
+			if strings.HasPrefix(conn, "n1ql://") || strings.HasPrefix(conn, "http://") || strings.HasPrefix(conn, "https://") {
+				u, err := url.Parse(conn)
+				if err != nil {
+					level.Error(j.log).Log("msg", "Failed to parse N1QL URL", "url", conn, "err", err)
+					continue
+				}
+				user := ""
+				password := ""
+				if u.User != nil {
+					user = u.User.Username()
+					password, _ = u.User.Password()
+				}
+				database := strings.TrimPrefix(u.Path, "/")
+				// For N1QL, the host is the host:port of the query service
+				newConn := &connection{
+					conn:     nil,
+					url:      conn,
+					driver:   "n1ql",
+					host:     u.Host,
+					database: database,
+					user:     user,
+				}
+				j.conns = append(j.conns, newConn)
+
+				ac := []byte(fmt.Sprintf(`[{"user": "local:%s", "pass": "%s"}]`, user, password))
+				//level.Info(j.log).Log("msg", "N1QL credentials", "creds", string(ac))
+				go_n1ql.SetQueryParams("creds", string(ac))
+				go_n1ql.SetQueryParams("timeout", "30s")
+				continue
 			}
 
 			u, err := url.Parse(conn)
