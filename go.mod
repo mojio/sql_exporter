@@ -54,6 +54,9 @@ require (
 	github.com/aws/smithy-go v1.20.2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/couchbase/go-couchbase v0.1.1 // indirect
+	github.com/couchbase/gomemcached v0.3.3 // indirect
+	github.com/couchbase/goutils v0.1.2 // indirect
 	github.com/danieljoos/wincred v1.2.2 // indirect
 	github.com/dvsekhvalnov/jose2go v1.6.0 // indirect
 	github.com/elastic/go-sysinfo v1.11.2 // indirect
@@ -132,3 +135,5 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	howett.net/plist v1.0.1 // indirect
 )
+
+require github.com/couchbase/go_n1ql v0.0.0-20220303011133-0ed4bf93e31d
