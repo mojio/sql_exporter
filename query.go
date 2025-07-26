@@ -195,10 +195,10 @@ func (q *Query) updateMetrics(conn *connection, res map[string]interface{}, iv s
 
 // updateMetrics parses a single row and returns a const metric
 func (q *Query) updateMetric(conn *connection, res map[string]interface{}, valueName string, iv string, il string) (prometheus.Metric, error) {
-	level.Debug(q.log).Log("msg", "Updating metric", "valueName", valueName, "res", res)
+	//level.Debug(q.log).Log("msg", "Updating metric", "valueName", valueName, "res", res)
 	var value float64
 	if i, ok := res[valueName]; ok {
-		level.Debug(q.log).Log("msg", "Value type", "type", fmt.Sprintf("%T", i), "valueName", valueName)
+		//level.Debug(q.log).Log("msg", "Value type", "type", fmt.Sprintf("%T", i), "valueName", valueName)
 		switch f := i.(type) {
 		case int:
 			value = float64(f)
@@ -224,7 +224,7 @@ func (q *Query) updateMetric(conn *connection, res map[string]interface{}, value
 					value = val
 				} else {
 					// If float parsing fails, try JSON parsing
-					level.Info(q.log).Log("msg", "Parsing JSON data", "data", string(f), "valueField", valueName)
+					//level.Debug(q.log).Log("msg", "Parsing JSON data", "data", string(f), "valueField", valueName)
 					if err := json.Unmarshal(f, &jsonData); err == nil {
 						if v, ok := jsonData[valueName]; ok {
 							switch vt := v.(type) {
@@ -286,7 +286,7 @@ func (q *Query) updateMetric(conn *connection, res map[string]interface{}, value
 				if conn.driver == "n1ql" {
 					// For N1QL, treat as JSON containing a single scalar string
 					var jsonStr string
-					level.Info(q.log).Log("msg", "Parsing JSON data", "data", string(str), "label", label)
+					//level.Debug(q.log).Log("msg", "Parsing JSON data", "data", string(str), "label", label)
 					if err := json.Unmarshal(str, &jsonStr); err != nil {
 						lv = string(str) // Fallback to raw string if not valid JSON
 					} else {

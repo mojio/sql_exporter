@@ -374,7 +374,6 @@ func (j *Job) updateConnections() {
 				j.conns = append(j.conns, newConn)
 
 				ac := []byte(fmt.Sprintf(`[{"user": "local:%s", "pass": "%s"}]`, user, password))
-				//level.Info(j.log).Log("msg", "N1QL credentials", "creds", string(ac))
 				go_n1ql.SetQueryParams("creds", string(ac))
 				go_n1ql.SetQueryParams("timeout", "30s")
 				continue
